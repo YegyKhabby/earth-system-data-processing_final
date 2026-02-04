@@ -1,6 +1,6 @@
 # AIFS & ERA5 Data Download Automation Guide
 
-This guide explains how to automate daily AIFS downloads and where to find AIFS/ERA5 logs.
+This guide explains how to automate daily AIFS and ERA5 downloads and where to find AIFS/ERA5 logs.
 
 ## Overview
 
@@ -9,8 +9,8 @@ The automation consists of:
 - **`aifs_config.yaml`**: Configuration for dates, steps, variables, output paths, and retries
 - **`scripts/schedule/schedule_aifs_daily.ps1`**: PowerShell script to set up Windows Task Scheduler
 - **`scripts/schedule/schedule_aifs_daily_macos.sh`**: macOS LaunchAgent helper
-- **`logs/aifs_log/`**: AIFS download logs (created automatically)
-- **`logs/era5_log/`**: ERA5 download logs (created automatically)
+- **`data_access/logs/aifs_log/`**: AIFS download logs (created automatically)
+- **`data_access/logs/era5_log/`**: ERA5 download logs (created automatically)
 
 ## Quick Start
 
@@ -66,12 +66,17 @@ You only need to set:
 - `CONDA_ENV` (your env name)
 - `SCHEDULE_HOUR` / `SCHEDULE_MINUTE`
 
+By default, the macOS scheduler uses `USE_CONDA="auto"`:
+- If `conda` is on your PATH, it runs both scripts inside `CONDA_ENV`
+- If not, it falls back to system `python3`
+
 ### Option 3: Manual Execution
 
 You can run the download script manually anytime:
 
 ```bash
 python data_access/scripts/download_aifs_forecasts.py --config data_access/aifs_config.yaml
+python data_access/scripts/download_era5_reanalysis.py
 ```
 
 ## Configuration
@@ -146,7 +151,7 @@ Unregister-ScheduledTask -TaskName "ECMWF_AIFS_Daily_Download" -Confirm:$false
 
 ### Log Files
 
-Every run creates a log file in `logs/aifs_log/aifs_download_YYYYMMDD.log`:
+Every run creates a log file in `data_access/logs/aifs_log/aifs_download_YYYYMMDD.log`:
 
 ```
 2026-01-08 23:00:01 - INFO - Starting AIFS data download
@@ -160,21 +165,21 @@ Every run creates a log file in `logs/aifs_log/aifs_download_YYYYMMDD.log`:
 
 ```powershell
 # View today's log
-Get-Content logs\aifs_log\aifs_download_$(Get-Date -Format "yyyyMMdd").log
+Get-Content data_access\logs\aifs_log\aifs_download_$(Get-Date -Format "yyyyMMdd").log
 
 # View last 20 lines
-Get-Content logs\aifs_log\aifs_download_$(Get-Date -Format "yyyyMMdd").log -Tail 20
+Get-Content data_access\logs\aifs_log\aifs_download_$(Get-Date -Format "yyyyMMdd").log -Tail 20
 
 # List all logs
-Get-ChildItem logs\aifs_log\*.log | Sort-Object LastWriteTime -Descending
+Get-ChildItem data_access\logs\aifs_log\*.log | Sort-Object LastWriteTime -Descending
 ```
 
 ### ERA5 Logs (Windows)
 
-ERA5 logs are written to `logs\era5_log\era5_download_YYYYMMDD.log`:
+ERA5 logs are written to `data_access\logs\era5_log\era5_download_YYYYMMDD.log`:
 
 ```powershell
-Get-Content logs\era5_log\era5_download_$(Get-Date -Format "yyyyMMdd").log -Tail 20
+Get-Content data_access\logs\era5_log\era5_download_$(Get-Date -Format "yyyyMMdd").log -Tail 20
 ```
 
 ## Troubleshooting

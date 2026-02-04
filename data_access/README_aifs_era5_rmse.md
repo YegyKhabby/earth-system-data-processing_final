@@ -84,7 +84,11 @@ We follow the standard 30-class Köppen legend. A few examples:
 Full list used in this project:
 Af, Am, Aw, BWh, BWk, BSh, BSk, Csa, Csb, Csc, Cwa, Cwb, Cwc, Cfa, Cfb, Cfc, Dsa, Dsb, Dsc, Dsd, Dwa, Dwb, Dwc, Dwd, Dfa, Dfb, Dfc, Dfd, ET, EF.
 
-
+## Land sea mask
+This parameter is the proportion of land, as opposed to ocean or inland waters (lakes, reservoirs, rivers and coastal waters), in a grid box.
+This parameter has values ranging between zero and one and is dimensionless.
+In cycles of the ECMWF Integrated Forecasting System (IFS) from CY41R1 (introduced in May 2015) onwards, grid boxes where this parameter has a value above 0.5 can be comprised of a mixture of land and inland water but not ocean. Grid boxes with a value of 0.5 and below can only be comprised of a water surface. In the latter case, the lake cover is used to determine how much of the water surface is ocean or inland water.
+In cycles of the IFS before CY41R1, grid boxes where this parameter has a value above 0.5 can only be comprised of land and those grid boxes with a value of 0.5 and below can only be comprised of ocean. 
 ---
 
 ## Scope and Configuration
@@ -419,9 +423,10 @@ The pipeline includes multiple safeguards to prevent data loss, corruption, and 
 ## References
 
 - https://www.ecmwf.int/en/forecasts/dataset/aifs-machine-learning-data  
-- https://www.ecmwf.int/en/forecasts/documentation-and-support/changes-ecmwf-model/aifs-single-v1-implementation  
+- https://www.ecmwf.int/en/forecasts/dataset/ecmwf-reanalysis-v5
 - https://earthkit.readthedocs.io/en/latest/
-
+- https://codes.ecmwf.int/grib/param-db/172
+- https://data-staging.naturalcapitalproject.org/dataset/sts-b04939b0df93eb3f4305a065933c66122a0edc6fa425b157b99aa7b4b4446d20
 ---
 
 ## License
