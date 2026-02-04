@@ -48,6 +48,9 @@ plots/
 
 # --- Local helper scripts ---
 data_access/scripts/verify/inspect_rmse_nc_headers.py
+data_access/scripts/verify/check_nans_aifs_era5.py
+data_access/scripts/verify/temp_era5_aifs_metadata.py
+tests/
 
 *.pdf
 *.log

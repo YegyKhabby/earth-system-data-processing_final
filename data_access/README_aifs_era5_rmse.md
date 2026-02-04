@@ -85,10 +85,12 @@ Full list used in this project:
 Af, Am, Aw, BWh, BWk, BSh, BSk, Csa, Csb, Csc, Cwa, Cwb, Cwc, Cfa, Cfb, Cfc, Dsa, Dsb, Dsc, Dsd, Dwa, Dwb, Dwc, Dwd, Dfa, Dfb, Dfc, Dfd, ET, EF.
 
 ## Land sea mask
+
 This parameter is the proportion of land, as opposed to ocean or inland waters (lakes, reservoirs, rivers and coastal waters), in a grid box.
 This parameter has values ranging between zero and one and is dimensionless.
 In cycles of the ECMWF Integrated Forecasting System (IFS) from CY41R1 (introduced in May 2015) onwards, grid boxes where this parameter has a value above 0.5 can be comprised of a mixture of land and inland water but not ocean. Grid boxes with a value of 0.5 and below can only be comprised of a water surface. In the latter case, the lake cover is used to determine how much of the water surface is ocean or inland water.
 In cycles of the IFS before CY41R1, grid boxes where this parameter has a value above 0.5 can only be comprised of land and those grid boxes with a value of 0.5 and below can only be comprised of ocean. 
+
 ---
 
 ## Scope and Configuration
@@ -161,7 +163,6 @@ Plotting & Analysis Layer
 ### Stage 1: Download
 - **Scripts:** `download_aifs_forecasts.py`, `download_era5_reanalysis.py`
 - **What happens:** Fetches AIFS GRIB2 files and ERA5 NetCDF files, stores in dated directories
-- **Orchestrated by:** `analyze_rmse_outputs.py` (automatic) or manual invocation
 - **Output:** Raw files in `data/aifs/raw/` and `data/era5/downloads/real/`
 
 ### Stage 2: Indexing & Pairing
@@ -173,14 +174,12 @@ Plotting & Analysis Layer
 ### Stage 3: RMSE Computation
 - **Script:** `compute_rmse_outputs.py` 
 - **What happens:** Loops over valid pairs, opens each AIFS+ERA5 file pair, computes squared error grids
-- **Called by:** `analyze_rmse_outputs.py` during orchestration
 - **Bottleneck:** ~70% of total time (1–2 sec per pair due to file I/O)
 - **Output:** Squared-error grids (intermediate, stored in memory)
 
 ### Stage 4: Aggregation
 - **Script:** `aggregate_rmse_outputs.py`
 - **What happens:** Groups squared-error grids by lead time, date, and hour; computes RMSE; saves NetCDF + CSV summaries
-- **Called by:** `analyze_rmse_outputs.py` during orchestration
 - **Output:** `data/rmse_outputs/rmse_by_step_*.nc`, `rmse_by_day_*.nc`, `rmse_by_hour_*.nc` (and CSV )
 
 ### Stage 5: Plotting & Analysis
@@ -226,7 +225,7 @@ Earth_System/earth-system-data-processing/
     scripts/
       schedule/
       verify/
-    results/                   # Plots saved by analyze_rmse_outputs.py
+    results/                   # Plots saved by 
     README_aifs_era5_rmse.md
     aifs_config.yaml
     STOP_DOWNLOADS_*.GB         # Marker file created when size limit is reached
