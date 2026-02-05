@@ -73,7 +73,9 @@ logger = logging.getLogger("era5_download")
 
 # Hard stop if total downloaded AIFS+ERA5 exceeds this threshold
 MAX_TOTAL_GB = 1.0
-STOP_MARKER = BASE_DIR / "data_access" / "STOP_DOWNLOADS_1GB"
+LOGS_DIR = BASE_DIR / "logs"
+LOGS_DIR.mkdir(exist_ok=True)  # Ensure logs directory exists
+STOP_MARKER = LOGS_DIR / "STOP_DOWNLOADS_1GB"
 DATA_ROOT = BASE_DIR / "data"
 AIFS_DATA_DIR = DATA_ROOT / "aifs"
 ERA5_DATA_DIR = DATA_ROOT / "era5"
@@ -97,7 +99,7 @@ def _check_total_size_limit(max_total_gb: float | None = None) -> bool:
     if max_total_gb is not None:
         global MAX_TOTAL_GB, STOP_MARKER
         MAX_TOTAL_GB = float(max_total_gb)
-        STOP_MARKER = BASE_DIR / "data_access" / f"STOP_DOWNLOADS_{MAX_TOTAL_GB:.1f}GB"
+        STOP_MARKER = LOGS_DIR / f"STOP_DOWNLOADS_{MAX_TOTAL_GB:.1f}GB"
     if STOP_MARKER.exists():
         logger.warning(f"Stop marker present ({STOP_MARKER}). Skipping downloads.")
         return True
@@ -149,16 +151,31 @@ def _apply_era5_yaml_config(cfg: dict) -> None:
     if "tasks" in cfg and isinstance(cfg["tasks"], list) and cfg["tasks"]:
         ERA5_TASKS = cfg["tasks"]
     if "default_start_date" in cfg and cfg["default_start_date"]:
-        try:
-            DEFAULT_START_DATE = datetime.strptime(cfg["default_start_date"], "%Y-%m-%d")
-        except Exception:
-            pass
-    if "default_end_date" in cfg and cfg["default_end_date"]:
-        if str(cfg["default_end_date"]) == "auto_minus_4_days":
-            DEFAULT_END_DATE = datetime.utcnow() - timedelta(days=4)
+        cfg_val = str(cfg["default_start_date"])
+        if cfg_val.startswith("auto_minus_"):
+            try:
+                days = int(cfg_val.replace("auto_minus_", "").replace("_days", ""))
+                computed_date = (datetime.utcnow() - timedelta(days=days)).strftime("%Y-%m-%d")
+                DEFAULT_START_DATE = datetime.strptime(computed_date, "%Y-%m-%d")
+            except Exception:
+                pass
         else:
             try:
-                DEFAULT_END_DATE = datetime.strptime(cfg["default_end_date"], "%Y-%m-%d")
+                DEFAULT_START_DATE = datetime.strptime(cfg_val, "%Y-%m-%d")
+            except Exception:
+                pass
+    if "default_end_date" in cfg and cfg["default_end_date"]:
+        cfg_val = str(cfg["default_end_date"])
+        if cfg_val.startswith("auto_minus_"):
+            try:
+                days = int(cfg_val.replace("auto_minus_", "").replace("_days", ""))
+                computed_date = (datetime.utcnow() - timedelta(days=days)).strftime("%Y-%m-%d")
+                DEFAULT_END_DATE = datetime.strptime(computed_date, "%Y-%m-%d")
+            except Exception:
+                pass
+        else:
+            try:
+                DEFAULT_END_DATE = datetime.strptime(cfg_val, "%Y-%m-%d")
             except Exception:
                 pass
 
@@ -679,6 +696,25 @@ def main() -> int:
         max_total_gb = _load_max_total_gb_from_aifs_config()
     if _check_total_size_limit(max_total_gb):
         return 0
+
+    # Disk space check (guardrail) - same as AIFS script
+    min_free_gb = float(era5_cfg.get("min_free_gb", 2.0)) if isinstance(era5_cfg, dict) else 2.0
+    try:
+        import shutil
+        total_b, used_b, free_b = shutil.disk_usage(DATA_DIR_REAL)
+        free_gb = free_b / (1024 ** 3)
+        if free_gb < min_free_gb:
+            raise RuntimeError(
+                f"Insufficient disk space at {DATA_DIR_REAL}: {free_gb:.2f} GB free, "
+                f"minimum required is {min_free_gb:.2f} GB"
+            )
+        logger.info(f"Disk space OK: {free_gb:.2f} GB free (min {min_free_gb:.2f} GB)")
+    except RuntimeError:
+        raise
+    except Exception as e:
+        logger.error(f"Disk space check failed: {e}")
+        raise
+
     try:
         _apply_cli_config(args)
     except Exception as e:

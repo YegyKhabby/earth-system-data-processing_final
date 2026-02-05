@@ -31,11 +31,10 @@ era5:
   end_date: null             # Example: "2026-01-31"
   
   # Mode 3: Default range (used if modes 1 & 2 are null)
-  # Fallback start: usually today minus N days, or a fixed date
-  default_start_date: "2026-01-19"
+  # Fallback start: "auto_minus_7_days" = today minus 7 days (dynamic), or fixed date like "2026-02-01"
+  default_start_date: "auto_minus_7_days"
   
-  # Fallback end: "auto_minus_4_days" computes (today - 4 days)
-  # Set to "auto" for today, or specific date like "2026-01-23"
+  # Fallback end: "auto_minus_4_days" = today minus 4 days (dynamic), or fixed date like "2026-01-23"
   default_end_date: "auto_minus_4_days"
 
   # === DOWNLOAD TASKS (which variables/levels) ===
@@ -65,3 +64,9 @@ era5:
   #   - 10.0+ GB (1 month or longer)
   # Set to 0 to disable (not recommended for automated runs)
   max_total_gb: 1.0
+  
+  # Minimum free disk space required before downloading (GB)
+  # If available free space drops below this, downloads stop to prevent "disk full" crashes
+  # Default 2.0 GB; increase on systems with large temporary files
+
+  min_free_gb: 2.0

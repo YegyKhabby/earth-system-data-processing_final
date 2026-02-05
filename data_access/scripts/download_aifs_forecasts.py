@@ -41,7 +41,9 @@ os.environ["ECMWF_OD_USE_INDEX"] = "0"
 
 # Hard stop if total downloaded AIFS+ERA5 exceeds this threshold
 MAX_TOTAL_GB = 1.0
-STOP_MARKER = BASE_DIR / "STOP_DOWNLOADS_1GB"
+LOGS_DIR = BASE_DIR / "logs"
+LOGS_DIR.mkdir(exist_ok=True)  # Ensure logs directory exists
+STOP_MARKER = LOGS_DIR / "STOP_DOWNLOADS_1GB"
 DATA_ROOT = BASE_DIR.parent / "data"
 AIFS_DATA_DIR = DATA_ROOT / "aifs"
 ERA5_DATA_DIR = DATA_ROOT / "era5"
@@ -65,7 +67,7 @@ def _check_total_size_limit(max_total_gb: float | None = None) -> bool:
     if max_total_gb is not None:
         global MAX_TOTAL_GB, STOP_MARKER
         MAX_TOTAL_GB = float(max_total_gb)
-        STOP_MARKER = BASE_DIR / f"STOP_DOWNLOADS_{MAX_TOTAL_GB:.1f}GB"
+        STOP_MARKER = LOGS_DIR / f"STOP_DOWNLOADS_{MAX_TOTAL_GB:.1f}GB"
     if STOP_MARKER.exists():
         logger.warning(f"Stop marker present ({STOP_MARKER}). Skipping downloads.")
         return True

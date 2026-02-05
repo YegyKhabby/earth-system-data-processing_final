@@ -1,7 +1,7 @@
 # AIFS vs ERA5 RMSE Comparison Pipeline
 
 **Author:** Yeganeh Khabbazian  
-**Tool:** Used GitHub Copilot
+**Tool:** Used GitHub Copilot and Codex
 
 ---
 
@@ -70,8 +70,11 @@ Place the GeoTIFF in:
 ```
 Earth_System/earth-system-data-processing/data/static/
 ```
-Use this filename (the analysis script checks it):
-- `koppen_geiger_climatezones_1991_2020_1km.tif`
+**Filename options** (the notebook checks in this order):
+- Preferred: `koppen_geiger_0p1.tif` (if available, 0.1° resolution)
+- Fallback: `koppen_geiger_climatezones_1991_2020_1km.tif` (1km dataset from link above)
+
+Rename the downloaded file to `koppen_geiger_0p1.tif` for consistency, or use the original name and the fallback will auto-detect it.
 
 **Class list (30 zones):**  
 We follow the standard 30-class Köppen legend. A few examples:
@@ -85,10 +88,12 @@ Full list used in this project:
 Af, Am, Aw, BWh, BWk, BSh, BSk, Csa, Csb, Csc, Cwa, Cwb, Cwc, Cfa, Cfb, Cfc, Dsa, Dsb, Dsc, Dsd, Dwa, Dwb, Dwc, Dwd, Dfa, Dfb, Dfc, Dfd, ET, EF.
 
 ## Land sea mask
+
 This parameter is the proportion of land, as opposed to ocean or inland waters (lakes, reservoirs, rivers and coastal waters), in a grid box.
 This parameter has values ranging between zero and one and is dimensionless.
 In cycles of the ECMWF Integrated Forecasting System (IFS) from CY41R1 (introduced in May 2015) onwards, grid boxes where this parameter has a value above 0.5 can be comprised of a mixture of land and inland water but not ocean. Grid boxes with a value of 0.5 and below can only be comprised of a water surface. In the latter case, the lake cover is used to determine how much of the water surface is ocean or inland water.
 In cycles of the IFS before CY41R1, grid boxes where this parameter has a value above 0.5 can only be comprised of land and those grid boxes with a value of 0.5 and below can only be comprised of ocean. 
+
 ---
 
 ## Scope and Configuration
@@ -96,13 +101,12 @@ In cycles of the IFS before CY41R1, grid boxes where this parameter has a value 
 - **Region for maps:** Central Europe  
   - `EUROPE_EXTENT = (-5, 25, 43, 58)` (lon_min, lon_max, lat_min, lat_max)
 - **Region for RMSE crop:**  
-  - `EUROPE_BBOX = (56, 0, 44, 20)` (N, W, S, E)
+  - `EUROPE_BBOX = (56, 0, 44, 20)` (N, W, S, E) = (lat_max, lon_min, lat_min, lon_max)
 - **Variables:** 2t and t500
 - **Matching:** AIFS valid time must exist in ERA5
 - **Global size cap:** `max_total_gb` in `aifs_config.yaml` or `era5_config.yaml` (applies to AIFS+ERA5 combined)
 
-EUROPE_EXTENT is used for plotting, while EUROPE_BBOX is used for RMSE computation
-to reduce I/O and processing cost.
+**Note on regional formats:** `EUROPE_EXTENT` uses Cartopy's (lon_min, lon_max, lat_min, lat_max) format for map plotting. `EUROPE_BBOX` uses compass notation (N, W, S, E) for spatial subsetting. Both define the same region but serve different purposes: EXTENT for visualization, BBOX for RMSE computation to reduce I/O cost.
 
 ---
 
@@ -114,6 +118,7 @@ to reduce I/O and processing cost.
 - **`data_access/era5_config.yaml`**: ERA5 download configuration
 - **`data_access/scripts/download_aifs_forecasts.py`**: Download AIFS forecast GRIB files
 - **`data_access/scripts/download_era5_reanalysis.py`**: Download ERA5 NetCDF files
+- **`data_access/scripts/download_era5_static_fields.py`**: Download static ERA5 fields (orography, land-sea mask) once and cache locally (uses EUROPE_EXTENT, not EUROPE_BBOX) 
 - **`data_access/scripts/compute_aifs_era5_rmse.py`**: Indexing, pairing, RMSE computation
 - **`data_access/scripts/aggregate_rmse_outputs.py`**: Aggregation by step/day/hour
 - **`data_access/scripts/verify/check_aifs_era5_grid.py`**: Grid alignment checks
@@ -159,33 +164,30 @@ Plotting & Analysis Layer
 ```
 
 ### Stage 1: Download
-- **Scripts:** `download_aifs_forecasts.py`, `download_era5_reanalysis.py`
-- **What happens:** Fetches AIFS GRIB2 files and ERA5 NetCDF files, stores in dated directories
-- **Orchestrated by:** `analyze_rmse_outputs.py` (automatic) or manual invocation
-- **Output:** Raw files in `data/aifs/raw/` and `data/era5/downloads/real/`
+- **Scripts:** `download_aifs_forecasts.py`, `download_era5_reanalysis.py`, `download_era5_static_fields.py` (static fields)
+- **What happens:** Fetches AIFS GRIB2 files and ERA5 NetCDF files, stores in dated directories. Static fields (orography, land-sea mask) are downloaded once and cached in `data/static/`
+- **Output:** Raw files in `data/aifs/raw/` and archived ERA5 files in `data/era5/archive/real/`; static fields in `data/static/`
 
 ### Stage 2: Indexing & Pairing
 - **Script:** `compute_aifs_era5_rmse.py` 
 - **What happens:** Scans downloaded files, creates manifest of available pairs, validates time alignment
-- **Called by:** `compute_rmse_outputs.py` during orchestration
+- **Called by:** `aggregate_rmse_outputs.py` (via the notebook orchestration)
 - **Output:** Pair manifests with status (`ok`, `missing_aifs`, `missing_era5`) saved to CSV
 
 ### Stage 3: RMSE Computation
-- **Script:** `compute_rmse_outputs.py` 
+- **Script:** `compute_aifs_era5_rmse.py` 
 - **What happens:** Loops over valid pairs, opens each AIFS+ERA5 file pair, computes squared error grids
-- **Called by:** `analyze_rmse_outputs.py` during orchestration
 - **Bottleneck:** ~70% of total time (1–2 sec per pair due to file I/O)
 - **Output:** Squared-error grids (intermediate, stored in memory)
 
 ### Stage 4: Aggregation
 - **Script:** `aggregate_rmse_outputs.py`
 - **What happens:** Groups squared-error grids by lead time, date, and hour; computes RMSE; saves NetCDF + CSV summaries
-- **Called by:** `analyze_rmse_outputs.py` during orchestration
 - **Output:** `data/rmse_outputs/rmse_by_step_*.nc`, `rmse_by_day_*.nc`, `rmse_by_hour_*.nc` (and CSV )
 
 ### Stage 5: Plotting & Analysis
 - **Jupyter Notebook:** `analyze_rmse_outputs.ipynb` (full orchestration + plotting, interactive)
-- **What happens:** Generates scatter maps, time series, and land/sea comparisons; saves to `data_access/results/`
+- **What happens:** Generates scatter maps, time series, and land/sea comparisons; saves to `results/`
 - **Calls:** Stages 1–4 in sequence
 - **Output:** PNG plots in `results/` directory
 
@@ -198,8 +200,7 @@ Plotting & Analysis Layer
 
 
 **Plotting** — Edit `PLOT_CFG` dictionary in `analyze_rmse_outputs.ipynb`
-
-
+( for better visualization land_sea mask plot has another configuration)
 
 ---
 
@@ -207,7 +208,7 @@ Plotting & Analysis Layer
 
 To automate daily downloads and analysis (macOS or Windows), see:
 
-**[`data_access/scripts/schedule/README_automation.md`](scripts/schedule/README_automation.md)**
+**[`data_access/scripts/schedule/README_automation.md`](data_access/scripts/schedule/README_automation.md)**
 
 Quick start:
 - **macOS:** `bash scripts/schedule/schedule_aifs_daily_macos.sh`
@@ -226,10 +227,12 @@ Earth_System/earth-system-data-processing/
     scripts/
       schedule/
       verify/
-    results/                   # Plots saved by analyze_rmse_outputs.py
+    results/                   # Output plots saved by analyze_rmse_outputs.ipynb
     README_aifs_era5_rmse.md
     aifs_config.yaml
-    STOP_DOWNLOADS_*.GB         # Marker file created when size limit is reached
+    era5_config.yaml
+    logs/
+      STOP_DOWNLOADS_*.GB       # Marker file created when size limit is reached
 
   data/
     aifs/
@@ -346,15 +349,13 @@ These optimizations would help for multi-month runs or parallel deployments. Not
 1. **Parallelize pair processing** (Est. **3–6× speedup**)
    - Currently: sequential loop over pairs
    - Proposed: 4–8 workers
- 
 
-
-5. **Resume logic** (Est. **huge speedup on re-runs**)
+2. **Resume logic** (Est. **huge speedup on re-runs**)
    - Currently: recompute all pairs every run
    - Proposed: save pair results to a manifest, skip already-computed pairs
    - Why not done: the script is modified constantly and need fresh computations for now
 
-6. **Compressed outputs** (Est. **20–30% storage savings, negligible runtime impact**)
+3. **Compressed outputs** (Est. **20–30% storage savings, negligible runtime impact**)
    - Currently: NetCDF with default compression
    - Proposed: NetCDF with `zlib` or Zarr format
    
@@ -368,12 +369,13 @@ The pipeline includes multiple safeguards to prevent data loss, corruption, and 
 ### Download Layer (`download_aifs_forecasts.py` & `download_era5_reanalysis.py`)
 
 **Network Resilience:**
-- **Retries with exponential backoff** — transient network failures are retried automatically; permanent errors (404s) are not retried, saving time on missing data
+- **Retries with linear backoff** — transient network failures are retried automatically; permanent errors (404s) are not retried, saving time on missing data
 - **HTTP 429 backoff** — respects ECMWF rate limiting; backs off gracefully when the portal is busy
 
 **Disk & Storage Guards:**
 - **Free disk space check** — stops downloads if available space drops below `min_free_gb` threshold, preventing "disk full" crashes mid-run
-- **Global size cap** — `STOP_DOWNLOADS_<limit>GB` marker file created when combined AIFS+ERA5 exceeds `max_total_gb` config; prevents scheduler from accidentally filling all storage
+  - *Set in config:* `min_free_gb: 2.0` (default) in both `aifs_config.yaml` and `era5_config.yaml`
+- **Global size cap** — `STOP_DOWNLOADS_<limit>GB` marker file created in `data_access/logs/` when combined AIFS+ERA5 exceeds `max_total_gb` config; prevents scheduler from accidentally filling all storage
   - *Why this matters:* scheduler runs daily; if one forgets to monitor, data could grow unbounded. This automatically stops it.
   - *Set in config:* `max_total_gb: 1.0` (default) or adjust.
 
@@ -411,9 +413,9 @@ The pipeline includes multiple safeguards to prevent data loss, corruption, and 
 - **`check_aifs_era5_grid.py`** — validates grid alignment (shape, coords, lon wrapping)
 - **`check_nans_aifs_era5.py`** — quick scan for data corruption across large datasets
 
-### Automation Layer (`scripts/schedule/*`)
-
-- **Daily scheduler** — runs downloads on macOS and Windows automatically; prevents data loss to short Open Data retention window (~4 days)
+### Automation Layer (`scripts/schedule/*`) 
+It is used to download both ERA5 (to solve latency problem) and AIFS 
+- **Daily scheduler** — runs downloads on macOS and Windows automatically; prevents data loss to short Open Data retention window (~4 recent days for AIFS and until ~5 days ago for ERA5)
 - **Conditional execution** — can disable specific steps (download, RMSE, plots) via config; prevents re-running expensive steps unnecessarily
 - **Documented turnoff** — see `data_access/scripts/schedule/README_automation.md` for how to pause scheduler without breaking workflow
 

@@ -88,3 +88,9 @@ aifs:
   # Default 1.0 GB is conservative; adjust based on your disk space
   # Set to 0 to disable (not recommended for automated runs)
   max_total_gb: 1.0
+  
+  # Minimum free disk space required before downloading (GB)
+  # If available free space drops below this, downloads stop to prevent "disk full" crashes
+  # Default 2.0 GB; increase on systems with large temporary files
+
+  min_free_gb: 2.0
