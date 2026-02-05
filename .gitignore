@@ -38,7 +38,7 @@ pkgs/
 # --- Data & large outputs ---
 data/
 output/
-results/
+
 plots/
 *.grib2
 *.idx
