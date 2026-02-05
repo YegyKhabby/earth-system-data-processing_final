@@ -124,23 +124,6 @@ In cycles of the IFS before CY41R1, grid boxes where this parameter has a value 
 
 ---
 
-## Repository Content
-
-- **`data_access/README_aifs_era5_rmse.md`**: This README
-- **`data_access/analyze_rmse_outputs.ipynb`**: Interactive Jupyter notebook for full pipeline orchestration and plotting 
-- **`data_access/aifs_config.yaml`**: AIFS download configuration
-- **`data_access/era5_config.yaml`**: ERA5 download configuration
-- **`data_access/scripts/download_aifs_forecasts.py`**: Download AIFS forecast GRIB files
-- **`data_access/scripts/download_era5_reanalysis.py`**: Download ERA5 NetCDF files
-- **`data_access/scripts/download_era5_static_fields.py`**: Download static ERA5 fields (orography, land-sea mask) once and cache locally (uses EUROPE_EXTENT, not EUROPE_BBOX) 
-- **`data_access/scripts/compute_aifs_era5_rmse.py`**: Indexing, pairing, RMSE computation
-- **`data_access/scripts/aggregate_rmse_outputs.py`**: Aggregation by step/day/hour
-- **`data_access/scripts/verify/check_aifs_era5_grid.py`**: Grid alignment checks
-- **`data_access/scripts/schedule/`**: Scheduling helpers and automation README
-- **`data_access/logs/`**: Download logs for AIFS and ERA5
-
----
-
 ## Getting Started
 
 ### Prerequisites
@@ -149,7 +132,6 @@ In cycles of the IFS before CY41R1, grid boxes where this parameter has a value 
 conda env create -f environment.yml
 conda activate aifs
 ```
-
 
 ### Run the Full Analysis
 
@@ -185,19 +167,14 @@ Plotting & Analysis Layer
 ### Stage 2: Indexing & Pairing
 - **Script:** `compute_aifs_era5_rmse.py` 
 - **What happens:** Scans downloaded files, creates manifest of available pairs, validates time alignment
-- **Called by:** `aggregate_rmse_outputs.py` (via the notebook orchestration)
-- **Output:** Pair manifests with status (`ok`, `missing_aifs`, `missing_era5`) saved to CSV
 
 ### Stage 3: RMSE Computation
 - **Script:** `compute_aifs_era5_rmse.py` 
 - **What happens:** Loops over valid pairs, opens each AIFS+ERA5 file pair, computes squared error grids
-- **Bottleneck:** ~70% of total time (1–2 sec per pair due to file I/O)
-- **Output:** Squared-error grids (intermediate, stored in memory)
 
 ### Stage 4: Aggregation
 - **Script:** `aggregate_rmse_outputs.py`
 - **What happens:** Groups squared-error grids by lead time, date, and hour; computes RMSE; saves NetCDF + CSV summaries
-- **Output:** `data/rmse_outputs/rmse_by_step_*.nc`, `rmse_by_day_*.nc`, `rmse_by_hour_*.nc` (and CSV )
 
 ### Stage 5: Plotting & Analysis
 - **Jupyter Notebook:** `analyze_rmse_outputs.ipynb` (full orchestration + plotting, interactive)
@@ -270,7 +247,6 @@ Earth_System/earth-system-data-processing/
       pairs_manifest_*.csv       # Pairing manifest for each variable
     static/                     # Land/sea mask, orography, Koppen
 ```
-
 ---
 
 ## Grid Alignment (AIFS vs ERA5)
@@ -411,7 +387,6 @@ The pipeline includes multiple safeguards to prevent data loss, corruption, and 
 - **Mock vs. real separation** — test downloads go to `downloads/mock/`, production to `downloads/real/`; prevents test files from contaminating real archive
 - **Archiving** — downloaded files organized by date in `archive/real/`; enables fast re-pairing without re-downloading
 
-### Computation Layer
 
 **Key safeguards in indexing, pairing, and aggregation:**
 - **Explicit pairing status** — each pair marked with status (`ok`, `missing_aifs`, `missing_era5`, `time_not_found`); audit trail for debugging
