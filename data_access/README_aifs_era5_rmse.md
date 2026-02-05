@@ -118,7 +118,7 @@ In cycles of the IFS before CY41R1, grid boxes where this parameter has a value 
 - **`data_access/era5_config.yaml`**: ERA5 download configuration
 - **`data_access/scripts/download_aifs_forecasts.py`**: Download AIFS forecast GRIB files
 - **`data_access/scripts/download_era5_reanalysis.py`**: Download ERA5 NetCDF files
-- **`data_access/scripts/download_era5_static_fields.py`**: Download static ERA5 fields (orography, land-sea mask) once and cache locally (uses EUROPE_EXTENT, not EUROPE_BBOX) (uses EUROPE_EXTENT, not EUROPE_BBOX) (uses EUROPE_EXTENT, not EUROPE_BBOX)
+- **`data_access/scripts/download_era5_static_fields.py`**: Download static ERA5 fields (orography, land-sea mask) once and cache locally (uses EUROPE_EXTENT, not EUROPE_BBOX) 
 - **`data_access/scripts/compute_aifs_era5_rmse.py`**: Indexing, pairing, RMSE computation
 - **`data_access/scripts/aggregate_rmse_outputs.py`**: Aggregation by step/day/hour
 - **`data_access/scripts/verify/check_aifs_era5_grid.py`**: Grid alignment checks
