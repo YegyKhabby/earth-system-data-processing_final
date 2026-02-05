@@ -53,6 +53,20 @@ This project evaluates **AIFS Single forecasts** against **ERA5 reanalysis** by 
 | **Access** | ECMWF ERA5 (downloaded locally for matching) |
 | **Format used here** | NetCDF (.nc) |
 
+
+### 3. Configure CDS API (for real ERA5 downloads)
+
+To download real ERA5 data, you need a free ECMWF account and API credentials:
+
+1. **Register** for a free account: https://cds.climate.copernicus.eu
+2. **Get your API key** from your Profile page
+3. **Create** `~/.cdsapirc` with:
+   ```
+   url: https://cds.climate.copernicus.eu/api/v2
+   key: YOUR_UID:YOUR_API_KEY
+   ```
+Without this setup, the ERA5 download script will fail unless mock is used.
+
 ---
 
 ## Köppen Climate Zones (Background Layer)
